@@ -1,0 +1,48 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+frontend/node_modules/
+backend/.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+
+# Builds
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# Runtime data (re-seedable via backend `python -m data.seed_db`)
+backend/nestai.db*
+*.sqlite3
+*.sqlite3-journal
+
+# Secrets & local environment (see *.env.example files)
+.env
+backend/.env
+frontend/.env
+*.pem
+*.key
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local scratch
+/tmp/

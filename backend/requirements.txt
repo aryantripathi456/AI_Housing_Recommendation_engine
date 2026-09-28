@@ -1,0 +1,34 @@
+# NestAI backend — FastAPI + SQLite-dev stack (synopsis § Technology Stack, scoped per plan)
+# Install (Linux/macOS): python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+# Install (Windows):     py -3.12 -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
+# Run:      uvicorn app.main:app --reload --port 8000
+
+# --- API framework ---
+# NOTE: plain uvicorn (not uvicorn[standard]) so `pip install` works on Windows
+# (uvloop in [standard] has no Windows wheels). --reload still works via stat-reload;
+# optionally add `watchfiles` on Windows for faster reload.
+fastapi==0.115.6
+uvicorn==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# --- Database (SQLite dev; models stay PostGIS-compatible for later migration) ---
+SQLAlchemy==2.0.36
+
+# --- Data science / ML core (hybrid recommender: MAUT + cosine similarity) ---
+pandas==2.2.3
+numpy==1.26.4
+scikit-learn==1.6.0
+
+# --- Spatial math (no PostGIS on SQLite; keep WKT lat/lng columns for migration) ---
+shapely==2.0.6
+pyproj==3.7.0
+
+# --- External APIs (Mapbox Matrix + OSM Overpass ingestion) ---
+httpx==0.28.1
+
+# --- Config ---
+python-dotenv==1.0.1
+
+# --- Tests ---
+pytest==8.3.4

@@ -50,6 +50,14 @@ export const HUBS = {
 export const getLiveability = (id: string) =>
   api<Liveability>(`/api/properties/${id}/liveability`);
 
+export interface NearestStationsResult {
+  propertyId: string;
+  stations: { name: string; distanceKm: number; latitude: number; longitude: number; locality: string }[];
+}
+
+export const getNearestStations = (id: string) =>
+  api<NearestStationsResult>(`/api/properties/${id}/nearest-stations`);
+
 export const getCommute = (originLat: number, originLng: number, destLat: number, destLng: number) =>
   api<CommuteResult>('/api/commute', {
     method: 'POST',

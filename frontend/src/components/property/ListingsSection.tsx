@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { KeyRound, SlidersHorizontal } from 'lucide-react';
 import FilterDrawer from '../filters/FilterDrawer';
 import SortDropdown from '../filters/SortDropdown';
 import PropertyGrid, { PropertyGridSkeleton } from '../property/PropertyGrid';
 import { EmptyState, ErrorState, LoadingState } from '../common/States';
 import type { RecommendationsApi } from '../../hooks/useRecommendations';
-import { DEFAULT_FILTERS, PERSONA_META } from '../../types/property';
+import { DEFAULT_FILTERS, DEFAULT_SALE_FILTERS, PERSONA_META } from '../../types/property';
 
 interface Props {
   rec: RecommendationsApi;
@@ -18,13 +18,22 @@ interface Props {
 
 export default function ListingsSection({ rec, savedIds, onToggleSave, onOpen, compareIds, onToggleCompare }: Props) {
   const [filterOpen, setFilterOpen] = useState(false);
+  const sale = rec.listingType === 'sale';
+  const budgetCap = sale ? 50000000 : 100000;
+  const defaultFilters = sale ? DEFAULT_SALE_FILTERS : DEFAULT_FILTERS;
   const activeFilterCount =
     rec.filters.types.length +
     rec.filters.bedrooms.length +
     rec.filters.amenities.length +
     rec.filters.personas.length +
     (rec.filters.location ? 1 : 0) +
-    (rec.filters.minPrice > 0 || rec.filters.maxPrice < 100000 ? 1 : 0);
+    (rec.filters.minPrice > 0 || rec.filters.maxPrice < budgetCap ? 1 : 0);
+
+  const switchTenure = (t: 'rent' | 'sale') => {
+    if (t === rec.listingType) return;
+    rec.setListingType(t);
+    rec.run({ listingType: t, filters: t === 'sale' ? DEFAULT_SALE_FILTERS : DEFAULT_FILTERS });
+  };
 
   return (
     <section id="recommendations" className="bg-mist-100 bg-[#F6F7F9] py-14 md:py-20">
@@ -38,8 +47,29 @@ export default function ListingsSection({ rec, savedIds, onToggleSave, onOpen, c
               Recommended For You
             </h2>
             <p className="mt-1.5 max-w-xl text-[14px] sm:text-[15px] text-slate-500">
-              Properties ranked by AI based on your lifestyle, preferences and location.
+              {sale
+                ? 'Homes to purchase in Mumbai, ranked by AI for your lifestyle and budget.'
+                : 'Properties ranked by AI based on your lifestyle, preferences and location.'}
             </p>
+            <div className="mt-4 inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Listing type">
+              {(['rent', 'sale'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="tab"
+                  aria-selected={(rec.listingType ?? 'rent') === t}
+                  onClick={() => switchTenure(t)}
+                  className={`flex h-10 items-center gap-2 rounded-full px-5 text-[13px] font-bold transition ${
+                    (rec.listingType ?? 'rent') === t
+                      ? 'bg-navy-900 text-white shadow'
+                      : 'text-slate-500 hover:text-navy-900'
+                  }`}
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  {t === 'rent' ? 'For Rent' : 'For Sale (₹)'}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-2.5">
             <SortDropdown value={rec.sort} onChange={rec.setSort} />
@@ -75,15 +105,16 @@ export default function ListingsSection({ rec, savedIds, onToggleSave, onOpen, c
           ) : rec.results.length === 0 ? (
             <EmptyState
               onReset={() => {
-                rec.setFilters(DEFAULT_FILTERS);
+                rec.setFilters(defaultFilters);
                 rec.setSearchQuery('');
-                rec.run({ filters: DEFAULT_FILTERS, search: '' });
+                rec.run({ filters: defaultFilters, search: '' });
               }}
             />
           ) : (
             <>
               <p className="mb-4 text-[13px] font-medium text-slate-500" aria-live="polite">
-                Showing <strong className="text-navy-900">{rec.results.length}</strong> homes for{' '}
+                Showing <strong className="text-navy-900">{rec.results.length}</strong>{' '}
+                {sale ? 'homes for sale' : 'rental homes'} for{' '}
                 <strong className="text-navy-900">{PERSONA_META[rec.persona].label}</strong>
                 {rec.searchQuery && <> matching “{rec.searchQuery}”</>}
               </p>
@@ -111,6 +142,7 @@ export default function ListingsSection({ rec, savedIds, onToggleSave, onOpen, c
         onApply={() => rec.run()}
         monthlyIncome={rec.monthlyIncome}
         onIncomeChange={rec.setMonthlyIncome}
+        listingType={rec.listingType}
       />
     </section>
   );

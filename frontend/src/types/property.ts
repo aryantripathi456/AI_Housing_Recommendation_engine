@@ -2,12 +2,23 @@ export type Persona = 'student' | 'professional' | 'family' | 'senior';
 
 export type PropertyType = 'Apartment' | 'House' | 'Studio' | 'Villa' | 'Shared';
 
+export type ListingType = 'rent' | 'sale';
+
+export interface NearestStation {
+  name: string;
+  distanceKm: number;
+  latitude: number;
+  longitude: number;
+  locality: string;
+}
+
 export interface Property {
   id: string;
   title: string;
   location: string;
   city: string;
   price: number;
+  listingType?: ListingType;
   type: PropertyType;
   bedrooms: number;
   bathrooms: number;
@@ -24,6 +35,7 @@ export interface Property {
   furnished: boolean;
   description: string;
   recommendationReasons: Record<Persona, string[]>;
+  nearestStations?: NearestStation[];
 }
 
 export interface Filters {
@@ -47,6 +59,7 @@ export interface RecommendationRequest {
   persona: Persona;
   filters: Filters;
   searchQuery: string;
+  listingType?: ListingType;
 }
 
 export const PERSONA_META: Record<
@@ -84,3 +97,17 @@ export const DEFAULT_FILTERS: Filters = {
   amenities: [],
   personas: [],
 };
+
+export const DEFAULT_SALE_FILTERS: Filters = {
+  minPrice: 0,
+  maxPrice: 50000000,
+  types: [],
+  bedrooms: [],
+  location: '',
+  amenities: [],
+  personas: [],
+};
+
+export function isSale(p: { listingType?: string }): boolean {
+  return p.listingType === 'sale';
+}

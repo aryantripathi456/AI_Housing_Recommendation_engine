@@ -27,6 +27,28 @@ def count_near(db: Session, lat: float, lng: float) -> dict[str, int]:
     return res['poi_counts']
 
 
+def nearest_stations(db: Session, lat: float, lng: float, limit: int = 3) -> list[dict]:
+    """3 nearest railway stations with haversine distances (km).
+
+    Reads the seeded real-station POIs (category=transport,
+    kind=railway_station). Pure Python distance sort — same SQLite-friendly
+    pattern as liveability (no PostGIS operators).
+    """
+    from app.core.geo import haversine_km
+
+    rows = db.query(POI).filter(
+        POI.category == 'transport', POI.kind == 'railway_station').all()
+    scored = [{
+        'name': p.name,
+        'distance_km': round(haversine_km(lat, lng, p.latitude, p.longitude), 2),
+        'latitude': p.latitude,
+        'longitude': p.longitude,
+        'locality': p.locality or '',
+    } for p in rows]
+    scored.sort(key=lambda s: s['distance_km'])
+    return scored[:limit]
+
+
 def fetch_overpass(db: Session, south: float, west: float, north: float, east: float,
                    locality: str = '') -> int:
     """One-shot ingestion: pull amenity nodes for a bbox into the POI table."""

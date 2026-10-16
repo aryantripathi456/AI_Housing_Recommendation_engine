@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { Heart, List, Map as MapIcon, MapPin, Star } from 'lucide-react';
 import type { Property } from '../../types/property';
-import { formatINR } from '../../utils/recommendation';
+import { formatPropertyPrice } from '../../utils/recommendation';
 import ErrorBoundary from '../common/ErrorBoundary';
 
 const PropertyMap = lazy(() => import('./PropertyMap'));
@@ -91,7 +91,7 @@ export default function MapSection({ properties, selectedId, onSelect, onOpen, s
                         ? 'border-emerald-500 bg-emerald-50/60 shadow-lg ring-1 ring-emerald-500'
                         : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
                     }`}
-                    aria-label={`${p.title}, ${formatINR(p.price)} per month`}
+                    aria-label={`${p.title}, ${formatPropertyPrice(p.price, p.listingType)}${p.listingType === 'sale' ? ' total' : ' per month'}`}
                   >
                     <img src={p.image} alt="" loading="lazy" className="h-20 w-24 shrink-0 rounded-xl object-cover" />
                     <div className="min-w-0 flex-1">
@@ -115,7 +115,7 @@ export default function MapSection({ properties, selectedId, onSelect, onOpen, s
                       </p>
                       <div className="mt-1 flex items-center justify-between">
                         <p className="text-[14px] font-extrabold text-navy-900">
-                          {formatINR(p.price)}<span className="text-[12px] font-medium text-slate-400">/mo</span>
+                          {formatPropertyPrice(p.price, p.listingType)}<span className="text-[12px] font-medium text-slate-400">{p.listingType === 'sale' ? '' : '/mo'}</span>
                         </p>
                         <span className="flex items-center gap-2 text-[12px] font-bold">
                           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">{p.matchScore}%</span>
@@ -134,7 +134,7 @@ export default function MapSection({ properties, selectedId, onSelect, onOpen, s
                 onClick={() => onOpen(selected.id)}
                 className="h-12 rounded-2xl bg-navy-900 text-[14px] font-semibold text-white transition hover:bg-emerald-600"
               >
-                View {selected.title} — {formatINR(selected.price)}/mo
+                View {selected.title} — {formatPropertyPrice(selected.price, selected.listingType)}{selected.listingType === 'sale' ? '' : '/mo'}
               </button>
             )}
           </div>

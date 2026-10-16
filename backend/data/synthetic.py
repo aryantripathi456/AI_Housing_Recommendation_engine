@@ -93,9 +93,40 @@ REASON_TEMPLATES: dict[str, list[str]] = {
     ],
 }
 
+# Real Mumbai suburban railway stations (name, lat, lng, locality label).
+# Coordinates are approximate public station locations.
+REAL_RAILWAY_STATIONS: list[tuple[str, float, float, str]] = [
+    ('Chhatrapati Shivaji Maharaj Terminus', 18.9398, 72.8355, 'Colaba'),
+    ('Churchgate', 18.9354, 72.8276, 'Colaba'),
+    ('Marine Lines', 18.9442, 72.8243, 'Colaba'),
+    ('Charni Road', 18.9519, 72.8189, 'Colaba'),
+    ('Grant Road', 18.9647, 72.8164, 'Lower Parel'),
+    ('Mumbai Central', 18.9690, 72.8190, 'Lower Parel'),
+    ('Mahalaxmi', 18.9778, 72.8241, 'Lower Parel'),
+    ('Lower Parel', 18.9962, 72.8302, 'Lower Parel'),
+    ('Prabhadevi', 19.0071, 72.8370, 'Dadar'),
+    ('Dadar', 19.0187, 72.8434, 'Dadar'),
+    ('Matunga', 19.0272, 72.8574, 'Dadar'),
+    ('Kurla', 19.0657, 72.8796, 'Ghatkopar'),
+    ('Ghatkopar', 19.0909, 72.9080, 'Ghatkopar'),
+    ('Chembur', 19.0525, 72.8993, 'Chembur'),
+    ('Bandra', 19.0548, 72.8401, 'Bandra West'),
+    ('Khar Road', 19.0688, 72.8413, 'Bandra West'),
+    ('Santa Cruz', 19.0812, 72.8419, 'Bandra West'),
+    ('Vile Parle', 19.1010, 72.8445, 'Andheri West'),
+    ('Andheri', 19.1197, 72.8464, 'Andheri West'),
+    ('BKC', 19.0626, 72.8656, 'BKC'),
+    ('Borivali', 19.2290, 72.8573, 'Borivali West'),
+    ('Thane', 19.1876, 72.9756, 'Thane West'),
+    ('Vashi', 19.0770, 72.9948, 'Vashi'),
+    ('Powai / Kanjurmarg', 19.1176, 72.9160, 'Powai'),
+]
+
 # POI kinds per liveability dimension.
+# NOTE: random transport POIs exclude railway_station so seeded real stations
+# stay authoritative (avoids fake "Bandra West railway station 1" names).
 POI_KINDS: dict[str, list[str]] = {
-    'transport': ['metro_station', 'railway_station', 'bus_stop'],
+    'transport': ['metro_station', 'bus_stop'],
     'education': ['school', 'college', 'library'],
     'healthcare': ['hospital', 'clinic', 'pharmacy'],
     'shopping': ['supermarket', 'grocery_store', 'market'],
@@ -157,6 +188,7 @@ def generate_properties(per_locality: int = 6) -> list[dict]:
                 'location': loc,
                 'city': 'Mumbai, Maharashtra',
                 'price': price,
+                'listing_type': 'rent',
                 'type': ptype,
                 'bedrooms': bedrooms,
                 'bathrooms': bathrooms,
@@ -176,6 +208,78 @@ def generate_properties(per_locality: int = 6) -> list[dict]:
                 },
             })
     return out
+
+
+def generate_sale_properties(per_locality: int = 3) -> list[dict]:
+    """Purchase listings in INR (total price, not monthly rent)."""
+    rng = random.Random(RNG_SEED + 10)
+    out: list[dict] = []
+    n = 0
+    for loc, clat, clng, base, spread in LOCALITIES:
+        # Scale monthly base rent to capital value: higher-rent localities cost more.
+        # base 21k -> ~85L, base 55k -> ~3.2Cr approx.
+        capital_base = int(base * 550)
+        capital_spread = int(spread * 550)
+        for i in range(per_locality):
+            n += 1
+            ptype = rng.choices(
+                ['Apartment', 'Apartment', 'Apartment', 'House', 'Villa', 'Studio'],
+                k=1,
+            )[0]
+            bedrooms = {'Studio': 1, 'Apartment': rng.choice([1, 2, 2, 3]),
+                        'House': 3, 'Villa': rng.choice([3, 4])}[ptype]
+            bathrooms = min(bedrooms, 3) if bedrooms <= 3 else 3
+            area = bedrooms * rng.randint(340, 520) + rng.randint(50, 200)
+            price = int(round((capital_base * (0.55 + 0.22 * bedrooms)
+                               + rng.uniform(-capital_spread, capital_spread)) / 100000.0) * 100000)
+            price = max(6000000, price)
+            lat, lng = _jitter(rng, clat, clng, 2.2)
+            amenities = sorted(rng.sample(AMENITY_POOL, rng.randint(3, 6)))
+            furnished = 'Furnished' in amenities
+            personas = ['family', 'professional']
+            if price <= 15000000:
+                personas.append('student')
+            if 'Elevator' in amenities:
+                personas.append('senior')
+            rating = round(rng.uniform(3.9, 5.0), 1)
+            title = f'{loc.split()[0]} {rng.choice(TITLE_POOL)} (For Sale)'
+            out.append({
+                'id': f'b{n:03d}',
+                'title': title,
+                'location': loc,
+                'city': 'Mumbai, Maharashtra',
+                'price': price,
+                'listing_type': 'sale',
+                'type': ptype,
+                'bedrooms': bedrooms,
+                'bathrooms': bathrooms,
+                'area': area,
+                'latitude': lat,
+                'longitude': lng,
+                'image': IMAGE_POOL[(n - 1) % len(IMAGE_POOL)],
+                'amenities': amenities,
+                'personas': sorted(set(personas)),
+                'distance_to_work': round(_haversine_km(lat, lng, *WORK_HUB) + rng.uniform(0, 1.5), 1),
+                'distance_to_college': round(_haversine_km(lat, lng, *COLLEGE_HUB) + rng.uniform(0, 1.0), 1),
+                'rating': rating,
+                'furnished': furnished,
+                'description': 'Own this ' + rng.choice(DESC_POOL).lower(),
+                'recommendation_reasons': {
+                    k: rng.sample(v, 3) for k, v in REASON_TEMPLATES.items()
+                },
+            })
+    return out
+
+
+def generate_real_station_pois() -> list[dict]:
+    return [{
+        'name': name,
+        'category': 'transport',
+        'kind': 'railway_station',
+        'latitude': lat,
+        'longitude': lng,
+        'locality': loc,
+    } for name, lat, lng, loc in REAL_RAILWAY_STATIONS]
 
 
 def generate_pois() -> list[dict]:

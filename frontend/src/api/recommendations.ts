@@ -1,11 +1,12 @@
 import { api } from './client';
-import type { Filters, Persona, Property } from '../types/property';
+import type { Filters, ListingType, Persona, Property } from '../types/property';
 
 export interface RecommendationRequest {
   persona: Persona;
   filters: Filters;
   searchQuery: string;
   monthlyIncome?: number | null;
+  listingType?: ListingType;
 }
 
 /**
@@ -22,6 +23,7 @@ export async function getRecommendations(req: RecommendationRequest): Promise<Pr
       filters: req.filters,
       searchQuery: req.searchQuery,
       monthlyIncome: req.monthlyIncome ?? null,
+      listingType: req.listingType ?? 'rent',
     }),
   });
 }

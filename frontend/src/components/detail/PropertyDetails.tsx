@@ -1,9 +1,10 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Bath, BedDouble, Heart, MapPin, Phone, Ruler, ShieldCheck, Star, X } from 'lucide-react';
 import type { Persona, Property } from '../../types/property';
-import { formatINR } from '../../utils/recommendation';
+import { formatPropertyPrice } from '../../utils/recommendation';
 import AIScore from '../property/AIScore';
 import RecommendationReasons from '../property/RecommendationReasons';
+import NearestStations from '../stations/NearestStations';
 
 // Intelligence panels (Recharts) load on demand with the modal.
 const AffordabilityPanel = lazy(() => import('../intelligence/AffordabilityPanel'));
@@ -57,7 +58,7 @@ export default function PropertyDetails({ property: p, persona, saved, onToggleS
               <p className="flex items-center gap-1.5 text-[13px] text-white/85"><MapPin className="h-4 w-4" /> {p.location}, {p.city}</p>
             </div>
             <div className="rounded-2xl bg-white/95 px-4 py-2.5 text-navy-900 backdrop-blur">
-              <p className="font-display text-[20px] font-extrabold">{formatINR(p.price)}<span className="text-[13px] font-medium text-slate-400">/mo</span></p>
+              <p className="font-display text-[20px] font-extrabold">{formatPropertyPrice(p.price, p.listingType)}<span className="text-[13px] font-medium text-slate-400">{p.listingType === 'sale' ? ' total' : '/mo'}</span></p>
             </div>
           </div>
         </div>
@@ -90,6 +91,10 @@ export default function PropertyDetails({ property: p, persona, saved, onToggleS
             </div>
 
             <div className="mt-6">
+              <NearestStations propertyId={p.id} initial={p.nearestStations} />
+            </div>
+
+            <div className="mt-6">
               <Suspense fallback={<PanelFallback />}>
                 <LiveabilityPanel propertyId={p.id} />
               </Suspense>
@@ -111,7 +116,7 @@ export default function PropertyDetails({ property: p, persona, saved, onToggleS
             </div>
             <RecommendationReasons reasons={p.recommendationReasons[persona]} persona={persona} limit={5} />
             <Suspense fallback={<PanelFallback />}>
-              <AffordabilityPanel propertyId={p.id} price={p.price} income={income} onIncomeChange={onIncomeChange} />
+              <AffordabilityPanel propertyId={p.id} price={p.price} income={income} onIncomeChange={onIncomeChange} listingType={p.listingType} />
             </Suspense>
             <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
               <ShieldCheck className="h-4 w-4 text-emerald-600" /> Verified listing · {p.furnished ? 'Furnished' : 'Unfurnished'}

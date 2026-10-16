@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getRecommendations } from '../api/recommendations';
-import type { Filters, Persona, Property, SortOption } from '../types/property';
-import { DEFAULT_FILTERS } from '../types/property';
+import type { Filters, ListingType, Persona, Property, SortOption } from '../types/property';
+import { DEFAULT_FILTERS, DEFAULT_SALE_FILTERS } from '../types/property';
 import { sortProperties } from '../utils/recommendation';
 import { loadStoredPersona, storePersona } from './useSaved';
 
@@ -28,6 +28,7 @@ export function useRecommendations() {
     () => loadStoredPersona() ?? 'professional',
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const [listingType, setListingTypeState] = useState<ListingType>('rent');
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<SortOption>('best-match');
   const [monthlyIncome, setMonthlyIncomeState] = useState<number | null>(loadIncome);
@@ -61,11 +62,19 @@ export function useRecommendations() {
     }
   }, []);
 
+  const setListingType = useCallback((t: ListingType) => {
+    setListingTypeState(t);
+    // Switch budget defaults per tenure so rent caps don't hide sale homes.
+    setFilters(t === 'sale' ? DEFAULT_SALE_FILTERS : DEFAULT_FILTERS);
+    setSelectedId(null);
+  }, []);
+
   const run = useCallback(
-    async (override?: { persona?: Persona; filters?: Filters; search?: string; income?: number | null }) => {
+    async (override?: { persona?: Persona; filters?: Filters; search?: string; income?: number | null; listingType?: ListingType }) => {
       const p = override?.persona ?? persona;
       const f = override?.filters ?? filters;
       const q = override?.search ?? searchQuery;
+      const t = override?.listingType ?? listingType;
       setLoading(true);
       setError(null);
       setLoadingStage(0);
@@ -76,7 +85,7 @@ export function useRecommendations() {
       try {
         // Backend owns filtering + ranking; income personalises price scoring.
         const income = override && 'income' in override ? override.income : monthlyIncome;
-        const data = await getRecommendations({ persona: p, filters: f, searchQuery: q, monthlyIncome: income });
+        const data = await getRecommendations({ persona: p, filters: f, searchQuery: q, monthlyIncome: income, listingType: t });
         setResults(data);
         setHasSearched(true);
         setSelectedId((prev) => prev ?? data[0]?.id ?? null);
@@ -87,7 +96,7 @@ export function useRecommendations() {
         setLoading(false);
       }
     },
-    [persona, filters, searchQuery, monthlyIncome],
+    [persona, filters, searchQuery, monthlyIncome, listingType],
   );
 
   const sorted = useMemo(() => sortProperties(results, sort), [results, sort]);
@@ -102,6 +111,8 @@ export function useRecommendations() {
     selectPersona,
     searchQuery,
     setSearchQuery,
+    listingType,
+    setListingType,
     filters,
     setFilters,
     sort,

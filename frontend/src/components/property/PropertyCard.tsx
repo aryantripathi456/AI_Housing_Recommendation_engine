@@ -1,6 +1,6 @@
-import { Bath, BedDouble, GitCompareArrows, Heart, MapPin, Ruler, Sparkles, Star } from 'lucide-react';
+import { Bath, BedDouble, GitCompareArrows, Heart, MapPin, Ruler, Sparkles, Star, TrainFront } from 'lucide-react';
 import type { Persona, Property } from '../../types/property';
-import { formatINR } from '../../utils/recommendation';
+import { formatPropertyPrice } from '../../utils/recommendation';
 import AIScore from './AIScore';
 import RecommendationReasons from './RecommendationReasons';
 
@@ -17,6 +17,8 @@ interface Props {
 }
 
 export default function PropertyCard({ property: p, persona, saved, onToggleSave, onOpen, onSelect, selected, compareSelected, onToggleCompare }: Props) {
+  const sale = p.listingType === 'sale';
+  const nearest = p.nearestStations?.[0];
   return (
     <article
       onClick={() => {
@@ -30,7 +32,7 @@ export default function PropertyCard({ property: p, persona, saved, onToggleSave
         }
       }}
       tabIndex={0}
-      aria-label={`${p.title}, ${p.location}, ${formatINR(p.price)} per month, ${p.matchScore}% AI match`}
+      aria-label={`${p.title}, ${p.location}, ${formatPropertyPrice(p.price, p.listingType)}${sale ? ' total' : ' per month'}, ${p.matchScore}% AI match`}
       className={`group cursor-pointer overflow-hidden rounded-[20px] border bg-white transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(11,22,38,0.16)] ${
         selected ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-slate-200'
       }`}
@@ -99,10 +101,15 @@ export default function PropertyCard({ property: p, persona, saved, onToggleSave
         </div>
 
         <div className="mt-3 flex items-baseline gap-1.5">
-          <p className="font-display text-[22px] font-extrabold text-navy-900">{formatINR(p.price)}</p>
-          <p className="text-[13px] font-medium text-slate-400">/month</p>
+          <p className="font-display text-[22px] font-extrabold text-navy-900">{formatPropertyPrice(p.price, p.listingType)}</p>
+          <p className="text-[13px] font-medium text-slate-400">{sale ? 'total' : '/month'}</p>
           <p className="ml-auto text-[13px] font-semibold text-slate-500">{p.bedrooms} BHK · {p.area} sq.ft</p>
         </div>
+        {sale && (
+          <span className="mt-1.5 inline-block rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-bold text-sky-700">
+            For Sale
+          </span>
+        )}
 
         <div className="mt-3 grid grid-cols-4 gap-2 border-y border-slate-100 py-3 text-center">
           {[
@@ -118,6 +125,15 @@ export default function PropertyCard({ property: p, persona, saved, onToggleSave
             </div>
           ))}
         </div>
+
+        {nearest && (
+          <p className="mt-3 flex items-center gap-1.5 truncate text-[12px] font-semibold text-slate-600">
+            <TrainFront className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span className="truncate">
+              {nearest.name} · {nearest.distanceKm.toFixed(1)} km
+            </span>
+          </p>
+        )}
 
         <div className="mt-4">
           <AIScore score={p.matchScore} compact />

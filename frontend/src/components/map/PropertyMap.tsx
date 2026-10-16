@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import type { Property } from '../../types/property';
-import { formatINR, formatK } from '../../utils/recommendation';
+import { formatK, formatPropertyPrice, formatSaleINR } from '../../utils/recommendation';
 
 interface Props {
   properties: Property[];
@@ -11,10 +11,15 @@ interface Props {
   onOpen: (id: string) => void;
 }
 
-function priceIcon(price: number, selected: boolean) {
+function markerLabel(p: Property): string {
+  if (p.listingType === 'sale') return formatSaleINR(p.price).replace('₹', '₹');
+  return formatK(p.price);
+}
+
+function priceIcon(p: Property, selected: boolean) {
   return L.divIcon({
     className: 'nestai-marker',
-    html: `<div style="position:relative"><span class="price-pill${selected ? ' selected' : ''}">${formatK(price)}</span></div>`,
+    html: `<div style="position:relative"><span class="price-pill${selected ? ' selected' : ''}">${markerLabel(p)}</span></div>`,
     iconSize: [70, 34],
     iconAnchor: [35, 34],
     popupAnchor: [0, -30],
@@ -93,7 +98,7 @@ export default function PropertyMap({ properties, selectedId, onSelect, onOpen }
           <Marker
             key={p.id}
             position={[p.latitude, p.longitude]}
-            icon={priceIcon(p.price, p.id === selectedId)}
+            icon={priceIcon(p, p.id === selectedId)}
             eventHandlers={{ click: () => onSelect(p.id) }}
           >
             <Popup>
@@ -104,7 +109,7 @@ export default function PropertyMap({ properties, selectedId, onSelect, onOpen }
                   <p className="text-[12px] text-slate-500">{p.location}</p>
                   <div className="mt-1.5 flex items-center justify-between">
                     <p className="text-[14px] font-extrabold text-navy-900">
-                      {formatINR(p.price)}<span className="font-medium text-slate-400">/mo</span>
+                      {formatPropertyPrice(p.price, p.listingType)}<span className="font-medium text-slate-400">{p.listingType === 'sale' ? '' : '/mo'}</span>
                     </p>
                     <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
                       {p.matchScore}% AI Match

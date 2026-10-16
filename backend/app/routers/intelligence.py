@@ -25,14 +25,16 @@ def commute(req: CommuteRequest, db: Session = Depends(get_db)):
 @router.post('/affordability', response_model=AffordabilityOut, response_model_by_alias=True)
 def affordability(req: AffordabilityRequest, db: Session = Depends(get_db)):
     price = req.price
+    listing_type = 'rent'
     if price is None and req.property_id:
         p = db.query(Property).filter_by(id=req.property_id).first()
         if not p:
             raise HTTPException(status_code=404, detail='Property not found')
         price = p.price
+        listing_type = getattr(p, 'listing_type', 'rent') or 'rent'
     if price is None:
         raise HTTPException(status_code=422, detail='Provide price or property_id')
     try:
-        return aff.evaluate(price, req.monthly_income)
+        return aff.evaluate(price, req.monthly_income, listing_type)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

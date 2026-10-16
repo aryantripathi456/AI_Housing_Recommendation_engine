@@ -27,6 +27,23 @@ export function formatINR(n: number): string {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
+export function formatSaleINR(n: number): string {
+  if (n >= 10000000) {
+    const cr = n / 10000000;
+    const txt = String(parseFloat(cr.toFixed(cr >= 10 ? 1 : 2)));
+    return `₹${txt} Cr`;
+  }
+  if (n >= 100000) {
+    const l = n / 100000;
+    return `₹${String(parseFloat(l.toFixed(1)))} L`;
+  }
+  return formatINR(n);
+}
+
+export function formatPropertyPrice(price: number, listingType?: string): string {
+  return listingType === 'sale' ? formatSaleINR(price) : formatINR(price);
+}
+
 export function formatK(n: number): string {
   if (n >= 1000) {
     const k = n / 1000;

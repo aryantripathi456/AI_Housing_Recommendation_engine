@@ -22,12 +22,26 @@ class CamelModel(BaseModel):
     )
 
 
+class NearestStationOut(CamelModel):
+    name: str
+    distance_km: float
+    latitude: float
+    longitude: float
+    locality: str = ''
+
+
+class NearestStationsOut(CamelModel):
+    property_id: str
+    stations: list[NearestStationOut] = Field(default_factory=list)
+
+
 class PropertyOut(CamelModel):
     id: str
     title: str
     location: str
     city: str
     price: int
+    listing_type: str = 'rent'  # rent | sale
     type: str
     bedrooms: int
     bathrooms: int
@@ -44,6 +58,7 @@ class PropertyOut(CamelModel):
     furnished: bool = False
     description: str = ''
     recommendation_reasons: dict[str, list[str]] = {}
+    nearest_stations: list[NearestStationOut] = Field(default_factory=list)
 
 
 class FiltersIn(CamelModel):
@@ -54,6 +69,7 @@ class FiltersIn(CamelModel):
     location: str = ''
     amenities: list[str] = Field(default_factory=list)
     personas: list[str] = Field(default_factory=list)
+    listing_type: str | None = None  # rent | sale | None(all)
 
 
 class RecommendationRequest(CamelModel):
@@ -65,6 +81,7 @@ class RecommendationRequest(CamelModel):
     work_lng: float | None = None
     college_lat: float | None = None
     college_lng: float | None = None
+    listing_type: str | None = None  # rent | sale | None(all)
 
 
 class LiveabilityOut(CamelModel):

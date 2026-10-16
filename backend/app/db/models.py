@@ -21,7 +21,8 @@ class Property(Base):
     title: Mapped[str] = mapped_column(String(160))
     location: Mapped[str] = mapped_column(String(80))  # neighbourhood, e.g. Bandra West
     city: Mapped[str] = mapped_column(String(80))
-    price: Mapped[int] = mapped_column(Integer)  # monthly rent, INR
+    price: Mapped[int] = mapped_column(Integer)  # monthly rent (rent) or total price (sale), INR
+    listing_type: Mapped[str] = mapped_column(String(8), default='rent', index=True)  # rent|sale
     type: Mapped[str] = mapped_column(String(24))  # Apartment|House|Studio|Villa|Shared
     bedrooms: Mapped[int] = mapped_column(Integer)
     bathrooms: Mapped[int] = mapped_column(Integer)

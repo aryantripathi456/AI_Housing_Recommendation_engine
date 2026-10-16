@@ -40,7 +40,17 @@ def amenity_similarity(prop_amenities: list[str], persona: str,
     return cos
 
 
-def price_score(price: int, max_price: float, income: float | None) -> float:
+def price_score(price: int, max_price: float, income: float | None,
+                listing_type: str = 'rent') -> float:
+    if listing_type == 'sale':
+        # Purchase: compare against 5-year income or budget cap, whichever larger.
+        if income and income > 0:
+            reference = max(income * 60.0, max_price)
+        else:
+            reference = max_price
+        if reference <= 0:
+            return 0.5
+        return minmax(reference - price, 0, reference)
     reference = income * 0.35 if income and income > 0 else max_price
     if reference <= 0:
         return 0.5
@@ -53,8 +63,16 @@ def commute_score(distance_km: float | None) -> float:
     return gaussian_decay(distance_km * 1000.0, 4000.0)
 
 
-def _matches_filters(p: Property, f: dict, q: str) -> bool:
-    if not (f.get('min_price', 0) <= p.price <= f.get('max_price', 100000)):
+def _matches_filters(p: Property, f: dict, q: str,
+                     listing_type: str | None = None) -> bool:
+    want = listing_type or f.get('listing_type')
+    if want and want != 'all':
+        if (getattr(p, 'listing_type', 'rent') or 'rent') != want:
+            return False
+    # Default price bounds depend on tenure: sale prices are in crores.
+    ptype = getattr(p, 'listing_type', 'rent') or 'rent'
+    default_max = 100000 if ptype == 'rent' else 50000000
+    if not (f.get('min_price', 0) <= p.price <= f.get('max_price', default_max)):
         return False
     if f.get('types') and p.type not in f['types']:
         return False
@@ -79,21 +97,24 @@ def _matches_filters(p: Property, f: dict, q: str) -> bool:
 
 def rank(db, properties: list[Property], persona: str, filters: dict,
          search_query: str = '', income: float | None = None,
-         work: tuple[float, float] | None = None) -> list[tuple[Property, float, dict]]:
+         work: tuple[float, float] | None = None,
+         listing_type: str | None = None) -> list[tuple[Property, float, dict]]:
     """Return [(property, matchScore 0..100, subscores)] sorted desc."""
     w = PERSONA_WEIGHTS.get(persona, PERSONA_WEIGHTS['professional'])
     q = (search_query or '').strip()
     ranked = []
     for p in properties:
-        if not _matches_filters(p, filters, q):
+        if not _matches_filters(p, filters, q, listing_type):
             continue
         liv = liv_service.get_for_property(db, p.id, p.latitude, p.longitude)
         dist = p.distance_to_work
         if work is not None:
             from app.core.geo import haversine_km
             dist = round(haversine_km(p.latitude, p.longitude, work[0], work[1]), 1)
+        p_listing = getattr(p, 'listing_type', 'rent') or 'rent'
+        max_ref = filters.get('max_price', 100000 if p_listing == 'rent' else 50000000)
         subs = {
-            'price': round(price_score(p.price, filters.get('max_price', 100000), income), 3),
+            'price': round(price_score(p.price, max_ref, income, p_listing), 3),
             'commute': round(commute_score(dist), 3),
             'liveability': round(liv['overall'] / 100.0, 3),
             'amenity': round(amenity_similarity(p.amenities or [], persona, filters.get('amenities')), 3),
@@ -104,16 +125,33 @@ def rank(db, properties: list[Property], persona: str, filters: dict,
     return ranked
 
 
+def _format_inr_short(n: int) -> str:
+    if n >= 10000000:
+        v = n / 10000000
+        return f'₹{v:.2f} Cr'.replace('.00 Cr', ' Cr')
+    if n >= 100000:
+        v = n / 100000
+        return f'₹{v:.1f} L'.replace('.0 L', ' L')
+    return f'₹{n:,}'
+
+
 def build_reasons(p: Property, persona: str, score_subs: dict,
                   income: float | None = None) -> list[str]:
     """Transparent 'why this home' bullets: stored templates + computed facts."""
     reasons = list((p.recommendation_reasons or {}).get(persona, [])[:3])
     facts: list[str] = []
+    listing = getattr(p, 'listing_type', 'rent') or 'rent'
     if p.distance_to_work is not None:
         facts.append(f'{p.distance_to_work} km from the BKC work hub')
     if income and income > 0:
-        ratio = p.price / income
-        facts.append(f'Rent is {ratio:.0%} of your stated income')
+        if listing == 'sale':
+            from app.services.affordability import estimate_emi
+            emi = estimate_emi(p.price)
+            facts.append(f'{_format_inr_short(p.price)} outright · ~₹{emi:,.0f}/mo EMI')
+            facts.append(f'EMI is {emi / income:.0%} of your stated income')
+        else:
+            ratio = p.price / income
+            facts.append(f'Rent is {ratio:.0%} of your stated income')
     if p.rating >= 4.5:
         facts.append(f'Highly rated at {p.rating}/5 by residents')
     if p.furnished:

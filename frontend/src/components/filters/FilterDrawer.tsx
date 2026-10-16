@@ -1,7 +1,7 @@
 import { RotateCcw, X } from 'lucide-react';
-import type { Filters, Persona, PropertyType } from '../../types/property';
-import { DEFAULT_FILTERS } from '../../types/property';
-import { formatINR } from '../../utils/recommendation';
+import type { Filters, ListingType, Persona, PropertyType } from '../../types/property';
+import { DEFAULT_FILTERS, DEFAULT_SALE_FILTERS } from '../../types/property';
+import { formatINR, formatSaleINR } from '../../utils/recommendation';
 
 interface Props {
   open: boolean;
@@ -11,6 +11,7 @@ interface Props {
   onApply: () => void;
   monthlyIncome: number | null;
   onIncomeChange: (n: number | null) => void;
+  listingType?: ListingType;
 }
 
 const TYPES: PropertyType[] = ['Apartment', 'House', 'Studio', 'Villa', 'Shared'];
@@ -18,8 +19,11 @@ const BEDROOMS = [1, 2, 3, 4];
 const AMENITIES = ['Parking', 'Gym', 'Security', 'Elevator', 'Furnished', 'Pet Friendly', 'WiFi'];
 const PERSONAS: Persona[] = ['student', 'professional', 'family', 'senior'];
 
-export default function FilterDrawer({ open, filters, onChange, onClose, onApply, monthlyIncome, onIncomeChange }: Props) {
+export default function FilterDrawer({ open, filters, onChange, onClose, onApply, monthlyIncome, onIncomeChange, listingType = 'rent' }: Props) {
   if (!open) return null;
+  const sale = listingType === 'sale';
+  const minOptions = sale ? [0, 5000000, 8000000, 10000000, 15000000, 20000000] : [0, 15000, 20000, 25000, 30000, 40000, 50000];
+  const maxOptions = sale ? [10000000, 15000000, 20000000, 30000000, 50000000] : [30000, 40000, 50000, 70000, 100000];
 
   const toggleArr = <T,>(arr: T[], v: T): T[] =>
     arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
@@ -46,29 +50,29 @@ export default function FilterDrawer({ open, filters, onChange, onClose, onApply
         <div className="nice-scroll flex-1 space-y-7 overflow-y-auto px-6 py-6">
           {/* Budget */}
           <div>
-            <p className="text-[13px] font-extrabold uppercase tracking-wider text-navy-900">Budget (monthly)</p>
+            <p className="text-[13px] font-extrabold uppercase tracking-wider text-navy-900">{sale ? 'Budget (total, INR)' : 'Budget (monthly)'}</p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <label className="block">
-                <span className="text-[12px] font-semibold text-slate-500">Min rent</span>
+                <span className="text-[12px] font-semibold text-slate-500">{sale ? 'Min price' : 'Min rent'}</span>
                 <select
                   value={filters.minPrice}
                   onChange={(e) => set({ minPrice: Number(e.target.value) })}
                   className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-[14px] font-semibold"
                 >
-                  {[0, 15000, 20000, 25000, 30000, 40000, 50000].map((v) => (
-                    <option key={v} value={v}>{v === 0 ? 'No min' : formatINR(v)}</option>
+                  {minOptions.map((v) => (
+                    <option key={v} value={v}>{v === 0 ? 'No min' : sale ? formatSaleINR(v) : formatINR(v)}</option>
                   ))}
                 </select>
               </label>
               <label className="block">
-                <span className="text-[12px] font-semibold text-slate-500">Max rent</span>
+                <span className="text-[12px] font-semibold text-slate-500">{sale ? 'Max price' : 'Max rent'}</span>
                 <select
                   value={filters.maxPrice}
                   onChange={(e) => set({ maxPrice: Number(e.target.value) })}
                   className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-[14px] font-semibold"
                 >
-                  {[30000, 40000, 50000, 70000, 100000].map((v) => (
-                    <option key={v} value={v}>{formatINR(v)}{v === 100000 ? '+' : ''}</option>
+                  {maxOptions.map((v) => (
+                    <option key={v} value={v}>{sale ? formatSaleINR(v) : formatINR(v)}{!sale && v === 100000 ? '+' : ''}{sale && v === 50000000 ? '+' : ''}</option>
                   ))}
                 </select>
               </label>
@@ -174,7 +178,7 @@ export default function FilterDrawer({ open, filters, onChange, onClose, onApply
 
         <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
           <button
-            type="button" onClick={() => onChange(DEFAULT_FILTERS)}
+            type="button" onClick={() => onChange(sale ? DEFAULT_SALE_FILTERS : DEFAULT_FILTERS)}
             className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 text-[14px] font-semibold text-slate-600 hover:bg-slate-50"
           >
             <RotateCcw className="h-4 w-4" /> Reset

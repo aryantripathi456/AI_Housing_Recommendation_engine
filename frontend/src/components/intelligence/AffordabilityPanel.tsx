@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { ApiError } from '../../api/client';
 import { getAffordability, type Affordability } from '../../api/intelligence';
-import { formatINR } from '../../utils/recommendation';
+import { formatINR, formatPropertyPrice } from '../../utils/recommendation';
 
 const BAND_COLOR: Record<string, string> = {
   'Affordable': '#059669',
@@ -15,9 +15,11 @@ interface Props {
   price: number;
   income: number | null;
   onIncomeChange: (n: number | null) => void;
+  listingType?: string;
 }
 
-export default function AffordabilityPanel({ propertyId, price, income, onIncomeChange }: Props) {
+export default function AffordabilityPanel({ propertyId, price, income, onIncomeChange, listingType }: Props) {
+  const sale = listingType === 'sale';
   const [data, setData] = useState<Affordability | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +105,11 @@ export default function AffordabilityPanel({ propertyId, price, income, onIncome
           </div>
           <div className="min-w-0">
             <p className="text-[13px] font-extrabold" style={{ color: BAND_COLOR[data.band] }}>{data.band}</p>
-            <p className="text-[12px] text-slate-500">{formatINR(price)}/mo of {formatINR(data.monthlyIncome)}/mo income</p>
+            <p className="text-[12px] text-slate-500">
+              {sale
+                ? `${formatPropertyPrice(price, 'sale')} total · EMI vs ${formatINR(data.monthlyIncome)}/mo income`
+                : `${formatINR(price)}/mo of ${formatINR(data.monthlyIncome)}/mo income`}
+            </p>
             <p className="mt-1 text-[12px] leading-snug text-slate-600">{data.advice}</p>
           </div>
         </div>

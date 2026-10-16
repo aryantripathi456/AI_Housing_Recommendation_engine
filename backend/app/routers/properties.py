@@ -12,6 +12,8 @@ router = APIRouter(prefix='/properties', tags=['properties'])
 
 
 def _apply(params: dict, query):
+    if params.get('listing_type'):
+        query = query.filter(Property.listing_type == params['listing_type'])
     if params.get('min_price') is not None:
         query = query.filter(Property.price >= params['min_price'])
     if params.get('max_price') is not None:
@@ -43,13 +45,22 @@ def list_properties(
     sort: str = 'best-match',
     limit: int = Query(default=50, le=200),
     offset: int = 0,
+    listing_type: str | None = Query(default=None, description='rent|sale|all'),
     db: Session = Depends(get_db),
 ):
-    q = _apply({'min_price': min_price, 'max_price': max_price, 'type': type,
+    from app.services import poi as poi_service
+
+    # Back-compat: omitted listing_type means rent-only (original behaviour).
+    # Explicit `all` returns both tenures; `sale` returns purchase listings.
+    effective = 'rent' if listing_type in (None, '') else listing_type
+    listing_filter = None if effective == 'all' else effective
+    q = _apply({'listing_type': listing_filter, 'min_price': min_price,
+                'max_price': max_price, 'type': type,
                 'bedrooms': bedrooms, 'location': location, 'search': search},
                db.query(Property))
     rows = q.all()
-    outs = [to_out(p) for p in rows]
+    outs = [to_out(p, nearest_stations=poi_service.nearest_stations(
+        db, p.latitude, p.longitude)) for p in rows]
     if sort == 'price-asc':
         outs.sort(key=lambda o: o.price)
     elif sort == 'price-desc':
@@ -65,7 +76,10 @@ def list_properties(
 
 @router.get('/{property_id}', response_model=PropertyOut, response_model_by_alias=True)
 def get_property(property_id: str, db: Session = Depends(get_db)):
+    from app.services import poi as poi_service
+
     p = db.query(Property).filter_by(id=property_id).first()
     if not p:
         raise HTTPException(status_code=404, detail='Property not found')
-    return to_out(p)
+    return to_out(p, nearest_stations=poi_service.nearest_stations(
+        db, p.latitude, p.longitude))

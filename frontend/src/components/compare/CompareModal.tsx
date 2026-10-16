@@ -3,7 +3,7 @@ import { GitCompareArrows, X } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { compareProperties, type CompareItem } from '../../api/intelligence';
 import type { Persona } from '../../types/property';
-import { formatINR } from '../../utils/recommendation';
+import { formatPropertyPrice } from '../../utils/recommendation';
 
 interface Props {
   ids: string[];
@@ -84,8 +84,8 @@ export default function CompareModal({ ids, persona, income, onRemove, onClear, 
                 </tr>
               </thead>
               <tbody>
-                <Row label="Monthly rent" vals={items.map((i) => i.property.price)} lowerBetter
-                  render={(v) => formatINR(v)} />
+                <Row label={items.some((i) => i.property.listingType === 'sale') ? 'Price' : 'Monthly rent'} vals={items.map((i) => i.property.price)} lowerBetter
+                  render={(v, i) => formatPropertyPrice(v, items[i].property.listingType)} />
                 <Row label="AI match" vals={items.map((i) => i.property.matchScore)}
                   render={(v) => `${Math.round(v)}%`} highlight />
                 <Row label="Liveability" vals={items.map((i) => i.liveability.overall)}

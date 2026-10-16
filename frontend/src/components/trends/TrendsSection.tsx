@@ -64,7 +64,7 @@ export default function TrendsSection() {
           Local Rent Trajectories
         </h2>
         <p className="mt-1.5 max-w-xl text-[14px] sm:text-[15px] text-slate-500">
-          Monthly average rents across localities. Series are synthetic — modelled trend plus seasonality for demonstration.
+          Monthly average rents across localities (rental market only; purchase prices excluded). Series are synthetic — modelled trend plus seasonality for demonstration.
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Choose localities">

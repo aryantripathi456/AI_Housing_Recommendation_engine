@@ -40,6 +40,13 @@ export default function Home() {
     rec.run().then(() => scrollTo('explore'));
   }, [rec, scrollTo]);
 
+  // Reset cross-tenure UI state when switching Rent/Buy tabs.
+  useEffect(() => {
+    setDetailId(null);
+    setCompareIds([]);
+    setCompareOpen(false);
+  }, [rec.listingType]);
+
   const detailProperty = rec.results.find((p) => p.id === detailId) ?? null;
   const compareProperties = compareIds
     .map((id) => rec.results.find((p) => p.id === id))

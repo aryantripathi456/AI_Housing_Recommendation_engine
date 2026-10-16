@@ -16,6 +16,8 @@ router = APIRouter(tags=['dashboard'])
 
 @router.post('/compare')
 def compare(req: CompareRequest, db: Session = Depends(get_db)):
+    from app.services import poi as poi_service
+
     if len(req.ids) > 3:
         raise HTTPException(status_code=422, detail='Compare at most 3 properties')
     items = []
@@ -25,11 +27,15 @@ def compare(req: CompareRequest, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail=f'Property {pid} not found')
         l = liv.get_for_property(db, p.id, p.latitude, p.longitude)
         entry: dict = {
-            'property': to_out(p).model_dump(by_alias=True),
+            'property': to_out(
+                p, nearest_stations=poi_service.nearest_stations(
+                    db, p.latitude, p.longitude)).model_dump(by_alias=True),
             'liveability': {'overall': l['overall'], 'dimensions': l['dimensions']},
         }
         if req.monthly_income:
-            entry['affordability'] = aff.evaluate(p.price, req.monthly_income)
+            entry['affordability'] = aff.evaluate(
+                p.price, req.monthly_income,
+                getattr(p, 'listing_type', 'rent') or 'rent')
         items.append(entry)
     return {'items': items}
 
